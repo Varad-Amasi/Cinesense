@@ -1,6 +1,13 @@
 import asyncio
 import os
+import sys
+from pathlib import Path
 import threading
+
+# Ensure package root is in sys.path for Vercel Serverless Functions
+_pkg_root = Path(__file__).resolve().parent.parent.parent
+if str(_pkg_root) not in sys.path:
+    sys.path.insert(0, str(_pkg_root))
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -25,7 +32,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
+_static_dir = _pkg_root / "static"
+if _static_dir.exists():
+    app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
+elif Path("static").exists():
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
 pipeline = None
 model_is_ready = False
@@ -76,6 +87,9 @@ def startup() -> None:
 
 @app.get("/")
 def root():
+    html_path = _pkg_root / "static" / "index.html"
+    if html_path.exists():
+        return FileResponse(str(html_path))
     return FileResponse("static/index.html")
 
 

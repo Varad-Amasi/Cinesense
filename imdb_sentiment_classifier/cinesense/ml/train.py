@@ -337,17 +337,65 @@ def build_pipeline(force_refresh_data: bool = False, cross_validate: bool = Fals
         joblib.dump(pipeline, MODEL_ARTIFACT, compress=3)
         print(f"Saved trained pipeline to {MODEL_ARTIFACT}")
     except Exception as exc:
-        print(f"Warning: failed to save pipeline: {exc}")
+        print(f"Warning: failed to save pipeline to {MODEL_ARTIFACT}: {exc}")
+        try:
+            import tempfile
+            tmp_art = Path(tempfile.gettempdir()) / "pipeline.joblib"
+            joblib.dump(pipeline, tmp_art, compress=3)
+            print(f"Saved trained pipeline to fallback path {tmp_art}")
+        except Exception as err:
+            print(f"Warning: fallback save also failed: {err}")
     return pipeline
 
 
-def load_saved_pipeline() -> object | None:
-    """Load a previously saved pipeline artifact if available."""
+def _download_model_from_url(url: str, target_path: Path) -> bool:
+    """Helper to auto-download pre-trained model weights from MODEL_URL."""
+    import os
+    import requests
+
     try:
-        if MODEL_ARTIFACT.exists():
-            pl = joblib.load(MODEL_ARTIFACT)
-            print(f"Loaded pipeline from {MODEL_ARTIFACT}")
-            return pl
+        print(f"Downloading pre-trained model from MODEL_URL ({url}) to {target_path}...")
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        with requests.get(url, stream=True, timeout=120) as resp:
+            resp.raise_for_status()
+            with target_path.open("wb") as f:
+                for chunk in resp.iter_content(chunk_size=1024 * 1024):
+                    if chunk:
+                        f.write(chunk)
+        print(f"Model downloaded successfully to {target_path}.")
+        return True
     except Exception as exc:
-        print(f"Warning: failed to load saved pipeline: {exc}")
+        print(f"Warning: Failed to download model from {url}: {exc}")
+        return False
+
+
+def load_saved_pipeline() -> object | None:
+    """Load a previously saved pipeline artifact if available with /tmp & MODEL_URL fallbacks."""
+    import os
+    import tempfile
+
+    tmp_path = Path(tempfile.gettempdir()) / "pipeline.joblib"
+    model_url = os.getenv("MODEL_URL", "").strip()
+
+    candidate_paths = [
+        MODEL_ARTIFACT,
+        MODELS_DIR / "pipeline.joblib",
+        Path("models/pipeline.joblib"),
+        tmp_path,
+    ]
+
+    # Auto-download from MODEL_URL if provided and no local model exists
+    if model_url and not any(p.exists() for p in candidate_paths):
+        if _download_model_from_url(model_url, tmp_path):
+            candidate_paths.insert(0, tmp_path)
+
+    for path in candidate_paths:
+        try:
+            if path.exists():
+                pl = joblib.load(path)
+                print(f"Loaded pipeline from {path}")
+                return pl
+        except Exception as exc:
+            print(f"Warning: failed to load saved pipeline from {path}: {exc}")
+
     return None
