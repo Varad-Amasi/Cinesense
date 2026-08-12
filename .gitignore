@@ -1,0 +1,62 @@
+# ═══════════════════════════════════════════════════════════════════════════
+# CineSense — Production .gitignore
+# ═══════════════════════════════════════════════════════════════════════════
+
+# ── Secrets & Environment ─────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Python Virtual Environments ───────────────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Python Bytecode / Cache ───────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# ── Test / Coverage Artifacts ─────────────────────────────────────────────
+.pytest_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.cover
+test-results/
+
+# ── ML Models & Training Data ────────────────────────────────────────────
+*.joblib
+*.tar.gz
+*.h5
+*.pkl
+*.pickle
+imdb_sentiment_classifier/data/
+imdb_sentiment_classifier/models/
+
+# ── Build / Distribution ─────────────────────────────────────────────────
+dist/
+build/
+*.egg-info/
+*.egg
+
+# ── OS & Editor Junk ─────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# ── Logs & Local Databases ───────────────────────────────────────────────
+*.log
+*.sqlite3
+*.db
+
+# ── Project-Specific Junk ────────────────────────────────────────────────
+lb_dump.html
+.trash_deleted_*/

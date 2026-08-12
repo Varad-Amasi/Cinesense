@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CineSense — AI-powered movie sentiment analysis. Know before you go." />
+  <title>CineSense — Know Before You Go</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+  <!-- Film grain overlay -->
+  <div class="grain-overlay" aria-hidden="true"></div>
+
+  <!-- Film strip decorations -->
+  <div class="film-strip film-strip--left" aria-hidden="true"></div>
+  <div class="film-strip film-strip--right" aria-hidden="true"></div>
+
+  <!-- ═══ HERO ═══ -->
+  <header class="hero" id="hero">
+    <div class="hero__reel" aria-hidden="true">
+      <svg class="hero__reel-icon" viewBox="0 0 100 100" width="80" height="80">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="currentColor" stroke-width="3"/>
+        <circle cx="50" cy="50" r="12" fill="none" stroke="currentColor" stroke-width="2.5"/>
+        <circle cx="50" cy="20" r="5" fill="currentColor" opacity=".5"/>
+        <circle cx="50" cy="80" r="5" fill="currentColor" opacity=".5"/>
+        <circle cx="20" cy="50" r="5" fill="currentColor" opacity=".5"/>
+        <circle cx="80" cy="50" r="5" fill="currentColor" opacity=".5"/>
+        <line x1="50" y1="5" x2="50" y2="95" stroke="currentColor" stroke-width="1" opacity=".2"/>
+        <line x1="5" y1="50" x2="95" y2="50" stroke="currentColor" stroke-width="1" opacity=".2"/>
+      </svg>
+    </div>
+    <h1 class="hero__title">CineSense</h1>
+    <p class="hero__tagline">Know before you go.</p>
+  </header>
+
+  <!-- ═══ SEARCH ═══ -->
+  <section class="search-section" id="searchSection">
+    <div class="search-bar" id="searchBar">
+      <input
+        type="text"
+        id="searchInput"
+        class="search-bar__input"
+        placeholder="Enter a movie title..."
+        autocomplete="off"
+        disabled
+      />
+      <button id="searchBtn" class="search-bar__btn" disabled>
+        <span class="search-bar__btn-text">Analyse</span>
+      </button>
+    </div>
+    <p class="search-section__status" id="modelStatus">
+      <span class="loading-dot"></span> Warming up the projection room…
+    </p>
+  </section>
+
+  <!-- ═══ SEARCH RESULTS ═══ -->
+  <section class="results-grid-section" id="searchResultsSection" style="display:none">
+    <h2 class="results-grid-section__title">Select a movie</h2>
+    <div class="results-grid" id="searchResultsGrid"></div>
+    <button class="back-btn" id="backToSearch">← New search</button>
+  </section>
+
+  <!-- ═══ LOADING ═══ -->
+  <section class="loading-section" id="loadingSection" style="display:none">
+    <div class="loading-projector">
+      <div class="loading-projector__beam"></div>
+      <div class="loading-projector__icon">🎥</div>
+    </div>
+    <p class="loading-section__text" id="loadingText">Reading the audience reviews…</p>
+  </section>
+
+  <!-- ═══ RESULTS CARD ═══ -->
+  <section class="result-section" id="resultSection" style="display:none">
+    <div class="result-card" id="resultCard">
+      <div class="result-card__poster">
+        <img id="resultPoster" src="" alt="Movie poster" />
+        <div class="result-card__poster-overlay"></div>
+      </div>
+      <div class="result-card__info">
+        <h2 class="result-card__title" id="resultTitle"></h2>
+        <p class="result-card__year" id="resultYear"></p>
+
+        <!-- Verdict badge -->
+        <div class="verdict-badge" id="verdictBadge">
+          <span class="verdict-badge__emoji" id="verdictEmoji"></span>
+          <span class="verdict-badge__text" id="verdictText"></span>
+        </div>
+
+        <!-- Confidence ring -->
+        <div class="confidence-ring-wrapper">
+          <svg class="confidence-ring" viewBox="0 0 120 120">
+            <circle class="confidence-ring__bg" cx="60" cy="60" r="52"/>
+            <circle class="confidence-ring__fill" id="confidenceRing" cx="60" cy="60" r="52"/>
+          </svg>
+          <div class="confidence-ring__label">
+            <span class="confidence-ring__value" id="confidenceValue">0</span>
+            <span class="confidence-ring__unit">%</span>
+          </div>
+          <p class="confidence-ring__caption">Positive Sentiment</p>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+          <div class="stat stat--pos">
+            <span class="stat__count" id="posCount">0</span>
+            <span class="stat__label">Positive</span>
+          </div>
+          <div class="stat stat--neg">
+            <span class="stat__count" id="negCount">0</span>
+            <span class="stat__label">Negative</span>
+          </div>
+          <div class="stat stat--total">
+            <span class="stat__count" id="totalCount">0</span>
+            <span class="stat__label">Reviews</span>
+          </div>
+        </div>
+
+        <!-- Sources -->
+        <div class="sources-breakdown" id="sourcesBreakdown"></div>
+      </div>
+    </div>
+
+    <!-- Review ticker -->
+    <div class="ticker-wrapper" id="tickerWrapper">
+      <div class="ticker" id="ticker"></div>
+    </div>
+
+    <button class="back-btn back-btn--results" id="newSearch">← Analyse another movie</button>
+  </section>
+
+  <!-- ═══ FOOTER ═══ -->
+  <footer class="footer">
+    <p>Powered by TF-IDF + Logistic Regression · Built with 🎬 by CineSense</p>
+  </footer>
+
+  <script src="/static/script.js"></script>
+</body>
+</html>
