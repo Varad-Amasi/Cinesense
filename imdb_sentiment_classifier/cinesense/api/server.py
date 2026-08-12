@@ -82,6 +82,10 @@ def startup() -> None:
         print("Loaded saved pipeline; model ready.")
         return
 
+    if os.getenv("VERCEL"):
+        print("Running on Vercel: skipping background training thread. Model must be pre-trained.")
+        return
+
     threading.Thread(target=_train_model, daemon=True).start()
 
 

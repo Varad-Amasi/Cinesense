@@ -1,0 +1,39 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/index.py",
+      "use": "@vercel/python"
+    },
+    {
+      "src": "imdb_sentiment_classifier/static/**",
+      "use": "@vercel/static"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/classify",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/search",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/status",
+      "dest": "/api/index.py"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/imdb_sentiment_classifier/static/$1"
+    },
+    {
+      "src": "/",
+      "dest": "/imdb_sentiment_classifier/static/index.html"
+    }
+  ]
+}

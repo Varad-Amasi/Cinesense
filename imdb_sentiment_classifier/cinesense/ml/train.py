@@ -6,13 +6,13 @@ import joblib
 import requests
 from sklearn.base import BaseEstimator, ClassifierMixin
 
-from cinesense.config import DATA_DIR
+from cinesense.config import DATA_DIR, BASE_DIR
 
 ACL_IMDB_URL = "https://ai.stanford.edu/~amaas/data/sentiment/aclImdb_v1.tar.gz"
 ACL_ARCHIVE = DATA_DIR / "aclImdb_v1.tar.gz"
 ACL_EXTRACTED = DATA_DIR / "aclImdb"
 PROCESSED_CACHE = DATA_DIR / "processed_training_corpus.joblib"
-MODELS_DIR = Path("models")
+MODELS_DIR = BASE_DIR / "models"
 MODEL_ARTIFACT = MODELS_DIR / "pipeline.joblib"
 
 
