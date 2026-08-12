@@ -1,3 +1,6 @@
+[tool.vercel]
+entrypoint = "cinesense/api/server.py"
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"

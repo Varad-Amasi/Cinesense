@@ -1,8 +1,0 @@
-{
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "cinesense/api/server.py"
-    }
-  ]
-}
