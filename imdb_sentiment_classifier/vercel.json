@@ -1,16 +1,8 @@
 {
-  "name": "cinesense",
-  "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "cinesense/api/server.py",
-      "use": "@vercel/python"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/(.*)",
-      "dest": "cinesense/api/server.py"
+      "source": "/(.*)",
+      "destination": "cinesense/api/server.py"
     }
   ]
 }
