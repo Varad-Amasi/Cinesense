@@ -20,7 +20,7 @@ from cinesense.ml.train import build_pipeline, load_saved_pipeline
 from cinesense.utils.aggregator import aggregate_reviews, flatten_sources
 from cinesense.utils.title_resolver import TitleMetadata, resolve_title, search_titles
 
-app = FastAPI(title="CineSense API", version="2.0.0")
+app = FastAPI(title="cinesense-api", version="2.0.0")
 
 # ── CORS Configuration ────────────────────────────────────────────────────
 _cors_origins = os.getenv("CORS_ORIGINS", "*").split(",")

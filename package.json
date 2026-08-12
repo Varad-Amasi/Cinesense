@@ -1,0 +1,9 @@
+{
+  "name": "cinesense",
+  "version": "2.0.0",
+  "description": "AI-powered movie & series sentiment analysis toolkit",
+  "private": true,
+  "scripts": {
+    "start": "python -m uvicorn cinesense.api.server:app --host 0.0.0.0 --port 8000"
+  }
+}
