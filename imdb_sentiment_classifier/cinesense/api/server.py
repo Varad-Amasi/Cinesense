@@ -103,6 +103,18 @@ def api_status() -> dict:
     return status()
 
 
+@app.get("/api/firebase-config")
+def firebase_config() -> dict:
+    return {
+        "apiKey": os.getenv("CINESENSE_FIREBASE_API_KEY") or os.getenv("VITE_FIREBASE_API_KEY") or os.getenv("FIREBASE_API_KEY", ""),
+        "authDomain": os.getenv("CINESENSE_FIREBASE_AUTH_DOMAIN") or os.getenv("VITE_FIREBASE_AUTH_DOMAIN") or os.getenv("FIREBASE_AUTH_DOMAIN", ""),
+        "projectId": os.getenv("CINESENSE_FIREBASE_PROJECT_ID") or os.getenv("VITE_FIREBASE_PROJECT_ID") or os.getenv("FIREBASE_PROJECT_ID", ""),
+        "storageBucket": os.getenv("CINESENSE_FIREBASE_STORAGE_BUCKET") or os.getenv("VITE_FIREBASE_STORAGE_BUCKET") or os.getenv("FIREBASE_STORAGE_BUCKET", ""),
+        "messagingSenderId": os.getenv("CINESENSE_FIREBASE_MESSAGING_SENDER_ID") or os.getenv("VITE_FIREBASE_MESSAGING_SENDER_ID") or os.getenv("FIREBASE_MESSAGING_SENDER_ID", ""),
+        "appId": os.getenv("CINESENSE_FIREBASE_APP_ID") or os.getenv("VITE_FIREBASE_APP_ID") or os.getenv("FIREBASE_APP_ID", ""),
+    }
+
+
 @app.post("/search")
 def search(req: SearchRequest) -> dict:
     if not req.query.strip():

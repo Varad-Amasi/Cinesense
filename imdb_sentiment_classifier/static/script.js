@@ -1,5 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   CineSense — Frontend Logic
+   CineSense — Frontend Logic with Firebase Auth & 1-Visit Guest Pass Limit
    ═══════════════════════════════════════════════════════════════════════════ */
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -34,12 +34,35 @@ document.addEventListener("DOMContentLoaded", () => {
   const sourcesBreakdown = document.getElementById("sourcesBreakdown");
   const ticker = document.getElementById("ticker");
 
+  // Auth Elements
+  const authModal = document.getElementById("authModal");
+  const openAuthModalBtn = document.getElementById("openAuthModalBtn");
+  const closeAuthModal = document.getElementById("closeAuthModal");
+  const googleAuthBtn = document.getElementById("googleAuthBtn");
+  const guestAuthBtn = document.getElementById("guestAuthBtn");
+  const guestAuthBtnText = document.getElementById("guestAuthBtnText");
+  const guestExpiredBanner = document.getElementById("guestExpiredBanner");
+  const authInfoBanner = document.getElementById("authInfoBanner");
+  const authInfoText = document.getElementById("authInfoText");
+  
+  const authUserProfile = document.getElementById("authUserProfile");
+  const userAvatar = document.getElementById("userAvatar");
+  const userName = document.getElementById("userName");
+  const userStatusBadge = document.getElementById("userStatusBadge");
+  const signOutBtn = document.getElementById("signOutBtn");
+  const authActions = document.getElementById("authActions");
+
   // ── State ────────────────────────────────────────────────────────────────
   let isReady = false;
   let backendLabel = "";
+  let auth = null;
+  let currentUser = null;
+  const GUEST_PASS_KEY = "has_used_guest_pass";
+  const GUEST_SESSION_KEY = "current_guest_session";
 
   // ── Initialization ───────────────────────────────────────────────────────
   checkServerStatus();
+  initFirebaseAuth();
 
   function checkServerStatus() {
     fetch("/api/status")
@@ -48,25 +71,248 @@ document.addEventListener("DOMContentLoaded", () => {
         backendLabel = data.backend ? ` (${data.backend})` : "";
         if (data.ready) {
           isReady = true;
-          searchInput.disabled = false;
-          searchBtn.disabled = false;
-          modelStatus.innerHTML = `<span style=\"color:var(--emerald);\">●</span> ML Engine Online & Ready${backendLabel}`;
-          searchInput.focus();
+          if (canUserSearch()) {
+            searchInput.disabled = false;
+            searchBtn.disabled = false;
+          }
+          modelStatus.innerHTML = `<span style="color:var(--emerald);">●</span> ML Engine Online & Ready${backendLabel}`;
         } else {
-          // Informative warm-up message while training/initializing
-          modelStatus.innerHTML = `<span class=\"loading-dot\"></span> Warming up the projection room…${backendLabel}`;
+          modelStatus.innerHTML = `<span class="loading-dot"></span> Warming up the projection room…${backendLabel}`;
           setTimeout(checkServerStatus, 1500);
         }
       })
       .catch((err) => {
-        // Network or server error — show explicit offline message and retry
         console.warn('checkServerStatus failed:', err);
-        modelStatus.innerHTML = `<span style=\"color:var(--amber-v);\">●</span> Backend offline — retrying...`;
+        modelStatus.innerHTML = `<span style="color:var(--amber-v);">●</span> Backend offline — retrying...`;
         searchInput.disabled = true;
         searchBtn.disabled = true;
         setTimeout(checkServerStatus, 3000);
       });
   }
+
+  // ── Firebase Auth & 1-Visit Guest Pass Enforcement ───────────────────────
+  function initFirebaseAuth() {
+    fetch("/api/firebase-config")
+      .then(res => res.json())
+      .then(config => {
+        if (config && config.apiKey && typeof firebase !== "undefined") {
+          if (!firebase.apps.length) {
+            firebase.initializeApp(config);
+          }
+          auth = firebase.auth();
+          listenToAuthState();
+        } else {
+          console.warn("Firebase config not set or SDK uninitialized. Running local auth mode.");
+          evaluateGuestPassStatus();
+        }
+      })
+      .catch(err => {
+        console.warn("Failed to fetch Firebase config:", err);
+        evaluateGuestPassStatus();
+      });
+  }
+
+  function evaluateGuestPassStatus() {
+    const hasUsedGuestPass = localStorage.getItem(GUEST_PASS_KEY) === "true";
+    const isGuestActive = sessionStorage.getItem(GUEST_SESSION_KEY) === "active";
+
+    if (hasUsedGuestPass && !isGuestActive) {
+      showGuestExpiredUI();
+    } else if (isGuestActive) {
+      showSignedInUI({ displayName: "Guest User", photoURL: "", isAnonymous: true }, true);
+    } else {
+      showSignedOutUI();
+    }
+  }
+
+  function listenToAuthState() {
+    if (!auth) return;
+
+    auth.onAuthStateChanged(async (user) => {
+      currentUser = user;
+      const hasUsedGuestPass = localStorage.getItem(GUEST_PASS_KEY) === "true";
+      const isGuestActive = sessionStorage.getItem(GUEST_SESSION_KEY) === "active";
+
+      if (user) {
+        if (user.isAnonymous) {
+          // Anonymous Guest Session
+          if (hasUsedGuestPass && !isGuestActive) {
+            // Guest pass was already used on a previous visit -> Expire & Sign Out!
+            await auth.signOut();
+            currentUser = null;
+            sessionStorage.removeItem(GUEST_SESSION_KEY);
+            showGuestExpiredUI();
+            openAuthModalHandler();
+            return;
+          }
+          // Mark guest pass as consumed for future visits
+          localStorage.setItem(GUEST_PASS_KEY, "true");
+          sessionStorage.setItem(GUEST_SESSION_KEY, "active");
+          showSignedInUI(user, true);
+        } else {
+          // Permanent User (Google Sign-In)
+          sessionStorage.removeItem(GUEST_SESSION_KEY);
+          showSignedInUI(user, false);
+        }
+      } else {
+        // Not signed in
+        if (hasUsedGuestPass) {
+          showGuestExpiredUI();
+        } else {
+          showSignedOutUI();
+        }
+      }
+    });
+  }
+
+  function canUserSearch() {
+    const hasUsedGuestPass = localStorage.getItem(GUEST_PASS_KEY) === "true";
+    const isGuestActive = sessionStorage.getItem(GUEST_SESSION_KEY) === "active";
+
+    if (currentUser) {
+      if (currentUser.isAnonymous && hasUsedGuestPass && !isGuestActive) return false;
+      return true;
+    }
+    if (isGuestActive) return true;
+    if (hasUsedGuestPass) return false;
+    return true;
+  }
+
+  function showGuestExpiredUI() {
+    guestAuthBtn.disabled = true;
+    guestAuthBtnText.textContent = "🎟️ Guest Pass Used (Expired)";
+    guestExpiredBanner.style.display = "flex";
+    authInfoBanner.style.display = "none";
+    
+    authUserProfile.style.display = "none";
+    authActions.style.display = "block";
+    
+    searchInput.disabled = true;
+    searchBtn.disabled = true;
+    searchInput.placeholder = "Guest access expired. Please sign in with Google...";
+    modelStatus.innerHTML = `<span style="color:var(--crimson);">●</span> Guest access expired. Sign in with Google to continue.`;
+  }
+
+  function showSignedOutUI() {
+    const hasUsedGuestPass = localStorage.getItem(GUEST_PASS_KEY) === "true";
+    guestExpiredBanner.style.display = hasUsedGuestPass ? "flex" : "none";
+    authInfoBanner.style.display = "none";
+
+    guestAuthBtn.disabled = hasUsedGuestPass;
+    guestAuthBtnText.textContent = hasUsedGuestPass 
+      ? "🎟️ Guest Pass Used (Expired)" 
+      : "🎟️ Continue as Guest (1-Visit Pass)";
+
+    authUserProfile.style.display = "none";
+    authActions.style.display = "block";
+
+    if (hasUsedGuestPass) {
+      searchInput.disabled = true;
+      searchBtn.disabled = true;
+      searchInput.placeholder = "Guest access expired. Please sign in...";
+    } else if (isReady) {
+      searchInput.disabled = false;
+      searchBtn.disabled = false;
+      searchInput.placeholder = "Enter a movie title...";
+    }
+  }
+
+  function showSignedInUI(user, isGuest) {
+    guestExpiredBanner.style.display = "none";
+    authInfoBanner.style.display = "block";
+    authInfoText.textContent = isGuest 
+      ? "Active Guest Session (1-Visit Pass)" 
+      : `Signed in as ${user.email || user.displayName}`;
+
+    const defaultAvatar = "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='%23555'%3E%3Ccircle cx='50' cy='35' r='20'/%3E%3Cpath d='M15 85c0-20 15-30 35-30s35 10 35 30'/%3E%3C/svg%3E";
+    userAvatar.src = user.photoURL || defaultAvatar;
+    userName.textContent = user.displayName || (isGuest ? "Guest User" : "CineSense User");
+    userStatusBadge.textContent = isGuest ? "1-Visit Pass" : "Permanent Account";
+
+    authUserProfile.style.display = "flex";
+    authActions.style.display = "none";
+
+    if (isReady) {
+      searchInput.disabled = false;
+      searchBtn.disabled = false;
+      searchInput.placeholder = "Enter a movie title...";
+    }
+  }
+
+  // ── Auth Event Handlers ──────────────────────────────────────────────────
+  function openAuthModalHandler() {
+    authModal.style.display = "flex";
+  }
+
+  function closeAuthModalHandler() {
+    authModal.style.display = "none";
+  }
+
+  openAuthModalBtn.addEventListener("click", openAuthModalHandler);
+  closeAuthModal.addEventListener("click", closeAuthModalHandler);
+
+  authModal.addEventListener("click", (e) => {
+    if (e.target === authModal) closeAuthModalHandler();
+  });
+
+  googleAuthBtn.addEventListener("click", async () => {
+    if (!auth) {
+      alert("Firebase Auth is not initialized. Please configure FIREBASE_* environment variables.");
+      return;
+    }
+    try {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      await auth.signInWithPopup(provider);
+      closeAuthModalHandler();
+    } catch (err) {
+      console.error("Google Sign-In error:", err);
+      if (err.code !== "auth/popup-closed-by-user") {
+        alert(err.message || "Google Sign-In failed.");
+      }
+    }
+  });
+
+  guestAuthBtn.addEventListener("click", async () => {
+    const hasUsedGuestPass = localStorage.getItem(GUEST_PASS_KEY) === "true";
+    if (hasUsedGuestPass) {
+      showGuestExpiredUI();
+      return;
+    }
+
+    if (!auth) {
+      // Local fallback mode when Firebase config env vars aren't set
+      localStorage.setItem(GUEST_PASS_KEY, "true");
+      sessionStorage.setItem(GUEST_SESSION_KEY, "active");
+      showSignedInUI({ displayName: "Guest User", photoURL: "", isAnonymous: true }, true);
+      closeAuthModalHandler();
+      return;
+    }
+
+    try {
+      await auth.signInAnonymously();
+      closeAuthModalHandler();
+    } catch (err) {
+      console.error("Guest Auth error:", err);
+      // Fallback if Firebase anonymous auth is disabled in console
+      localStorage.setItem(GUEST_PASS_KEY, "true");
+      sessionStorage.setItem(GUEST_SESSION_KEY, "active");
+      showSignedInUI({ displayName: "Guest User", photoURL: "", isAnonymous: true }, true);
+      closeAuthModalHandler();
+    }
+  });
+
+  signOutBtn.addEventListener("click", async () => {
+    sessionStorage.removeItem(GUEST_SESSION_KEY);
+    if (auth) {
+      try {
+        await auth.signOut();
+      } catch (err) {
+        console.error("Sign-out error:", err);
+      }
+    }
+    currentUser = null;
+    showSignedOutUI();
+  });
 
   // ── Event Listeners ──────────────────────────────────────────────────────
   searchBtn.addEventListener("click", performSearch);
@@ -83,6 +329,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Searching ────────────────────────────────────────────────────────────
   async function performSearch() {
+    if (!canUserSearch()) {
+      showGuestExpiredUI();
+      openAuthModalHandler();
+      return;
+    }
+
     const query = searchInput.value.trim();
     if (!query) return;
 
@@ -106,8 +358,10 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) {
       modelStatus.innerHTML = `<span style="color:var(--crimson);">●</span> Search failed. Server unreachable.`;
     } finally {
-      searchBtn.disabled = false;
-      searchInput.disabled = false;
+      if (canUserSearch()) {
+        searchBtn.disabled = false;
+        searchInput.disabled = false;
+      }
     }
   }
 
@@ -148,6 +402,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ── Classification ───────────────────────────────────────────────────────
   async function startClassification(movie) {
+    if (!canUserSearch()) {
+      showGuestExpiredUI();
+      openAuthModalHandler();
+      return;
+    }
+
     searchResultsSection.style.display = "none";
     loadingSection.style.display = "block";
     
@@ -266,7 +526,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!startTimestamp) startTimestamp = timestamp;
       const progress = Math.min((timestamp - startTimestamp) / duration, 1);
       
-      // Easing function: easeOutQuart
       const easeProgress = 1 - Math.pow(1 - progress, 4);
       
       obj.innerHTML = Math.floor(easeProgress * (end - start) + start);
