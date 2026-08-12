@@ -25,3 +25,6 @@ dependencies = [
     "aiohttp>=3.9.0",
     "cloudscraper>=1.2.0"
 ]
+
+[tool.setuptools.packages.find]
+exclude = ["api*", "api"]
