@@ -2,7 +2,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "destination": "imdb_sentiment_classifier/cinesense/api/server.py"
+      "destination": "/api/index.py"
     }
   ]
 }
